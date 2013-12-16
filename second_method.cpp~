@@ -47,10 +47,10 @@ void sieve_parallel(unsigned long max_value) {
 	#pragma omp parallel default(none) shared(tab,max_value) private(i,j)
 	{
 		#pragma omp for
-		for (i=2; i<max_value; ++i) {
+		for (i=2; i<=max_value; ++i) {
 			if(tab[i] == false) { 
 				//printf("%ld ", i);
-				for(j=i+i;j<max_value;j+=i) {
+				for(j=i;j<=max_value;j+=i) {
 					tab[j] = true;
 				}
 			}
@@ -59,17 +59,17 @@ void sieve_parallel(unsigned long max_value) {
 
         printf("\nSieve of Eratosthenes - parallel: %f\n", omp_get_wtime() - start);
 
-	for (unsigned long i=2; i<max_value; ++i)
+	/*for (unsigned long i=2; i<max_value; ++i)
 		if(tab[i] == false)
 			printf("%lu ", i);
-	printf("\n");
+	printf("\n");*/
 
 }
 
 
 int main(int argc, char **argv) {
 	//omp_set_num_threads(3);
-	sieve_sequential(100000);
-	sieve_parallel(100000);
+	sieve_sequential(1000000);
+	sieve_parallel(1000000);
 	return 0;
 }
