@@ -1,0 +1,42 @@
+/* Objective function */
+min: T;
+
+T > T1;
+T > T2;
+T > T3;
+T > T4;
+T > T5;
+
+TEC1 = 0  + 1*d1;
+T1 = TEC1 + 100 *a1; d1 + a1 = 10000 ;
+
+TSC2 = TEC1;
+TEC2 = TSC2 + 2*d2 + 1*d3;
+T2 = TEC2 + 100*a2; a2 + d2 + d3 = d1;
+
+TSC5 > TSC2 + 1*d3;
+TSC5 > TEC2 - 1000000  * x32;
+
+TEC5 = TSC5 + 0.5*d4;
+T5 = TEC5 + 100*a5; d4 + a5 = d3;
+
+TSC4 = TEC5;
+TEC4 > TSC4 + 0.5 *d5 + 200*a41;
+T4 = TEC4 + 200*a42; a41 + a42 + d5 = d4;
+200*a41 > TSC3 - TEC5 - 1000000  * y;
+200*a41 < TSC3 - TEC5 + 1000000  * y;
+
+TSC3 > TSC2 + 2*d2;
+TSC3 > TEC2 - 1000000  * x23;
+T3 > TSC3 + 50*a31 + 0.5 *d5 + 50*a32; d2 + d5 = a31 + a32;
+a31 > 0;
+a31 < d2;
+
+x23 < 1;
+x32 = 1 - x23;
+y < 1 + 0.0000001 * TSC3 - 0.0000001 * TEC5 - 0.00002*d4;
+y > 0.0000001 * TSC3 - 0.0000001 * TEC5 - 0.00002*d4;
+
+int x23, y;
+int d1, d2, d3;
+int a31, a32, a41, a42;

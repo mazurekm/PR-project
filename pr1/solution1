@@ -1,0 +1,35 @@
+python precompiler.py data1 model1.slv| lp_solve
+
+Value of objective function: 159274
+
+Actual values of the variables:
+T                          159274
+T1                         159230
+T2                         159220
+T3                         159268
+T4                         159274
+T5                         159274
+tEC1                        16430
+d1                           8215
+a11                          1785
+tSC2                        16430
+tEC2                        29620
+d3                           2747
+d2                           3848
+a21                          1620
+tSC3                        29620
+a31                             0
+X23                             0
+Y24                             1
+tEC3                        34948
+d5                           1776
+a32                          2072
+tSC5                        21924
+a51                             0
+Y35                             0
+tEC5                        21924
+d4                              0
+a52                          2747
+tEC4                       159274
+a41                          1776
+a42                             0

@@ -1,0 +1,56 @@
+min: T; 
+T>T1; T>T2; T>T3; T>T4; T>T5;
+
+tEC1=tSC1 K1*d1;
+T1=tEC1 V1*a11;
+d1 a11=D;
+
+tSC2=tEC1;
+tEC2=tSC2 K3*d3 K2*d2;
+T2=tEC2 V2*a21;
+d2 d3 a21=d1;
+
+tSC3>K2*d2 tSC2;
+tSC3>tEC2 V3*a31-M*X23-M*Y24;
+tSC3>tEC2-M*X23;
+tEC3=tSC3 K5*d5;
+T3=tEC3 V3*a32;
+a31 a32 d5=d2;
+a31<M-M*X23;
+a31<M-M*Y24;
+
+
+tSC5>K3*d3 tSC2;
+tSC5>tEC2 V5*a51-M M*X23-M*Y35;
+tSC5>tEC2-M M*X23;
+tEC5=tSC5 K4*d4;
+T5=tEC5 V5*a52;
+a51 a52 d4=d3;
+a51<M*X23;
+a51<M-M*Y35;
+
+tEC4>tEC5;
+tEC4>tEC3;
+tEC4>tEC5 V4*a41 K5*d5-M M*Y24;
+tEC4>tEC3 V4*a41 K4*d4-M M*Y35;
+T4=tEC4 V4*a42;
+d4 d5=a41 a42;
+a41<d4;
+a41<d5;
+a41<M*Y35 M-M*X23;
+a41<M*Y24 M*X23; 
+
+X23<1;
+Y24<1-X23;
+Y35<X23;
+int X23; 
+int Y35;
+int Y24;
+int a11;
+int a21;
+int a51;
+int a52;
+int a31;
+int a32;
+int a41;
+int a42;
