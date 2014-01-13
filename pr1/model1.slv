@@ -16,8 +16,8 @@ tSC3>tEC2-M*X23;
 tEC3=tSC3 K5*d5;
 T3=tEC3 V3*a32;
 a31 a32 d5=d2;
-V3*a31 < tEC5-tSC2-K2*d2;
-V5*a51 < tEC3-tSC2-K3*d3;
+V3*a31 < tEC5-tEC2;
+V5*a51 < tEC3-tEC2;
 a31<M-M*X23;
 a31<M-M*Y24;
 
