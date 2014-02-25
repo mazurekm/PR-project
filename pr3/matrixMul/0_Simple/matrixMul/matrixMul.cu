@@ -220,7 +220,6 @@ matrixMulv4(float *C, float *A, float *B, int width)
 	template <int BLOCK_SIZE> __global__ void
 matrixMulv5(float *C, float *A, float *B, int width)
 {
-	// Block index
 	int bx = blockIdx.x;
 	int by = blockIdx.y;
 
@@ -241,31 +240,35 @@ matrixMulv5(float *C, float *A, float *B, int width)
 	int bBegin = BLOCK_SIZE * bx;
 
 	// Step size used to iterate through the sub-matrices of B
-	int bStep  = 2*BLOCK_SIZE * width;
+	int bStep  = BLOCK_SIZE * width;
 
 	// Csub is used to store the element of the block sub-matrix
 	// that is computed by the thread
 	float Csub1 = 0, Csub2=0;
-	int flip=0;
-	__shared__ float As[2][BLOCK_SIZE][BLOCK_SIZE];
-	__shared__ float Bs[2][BLOCK_SIZE][BLOCK_SIZE];
-
-	As[flip][ty][tx] = A[aBegin + width * ty + tx];
-	Bs[flip][ty][tx] = B[bBegin + width * ty + tx];
-	Bs[flip][ty][tx+1] = B[bBegin+bStep + width * ty + tx];
-
-	__syncthreads();
 
 	// Loop over all the sub-matrices of A and B
 	// required to compute the block sub-matrix
 	for (int a = aBegin, b = bBegin;
 			a <= aEnd;
-			a += aStep, b += bStep)
+			a += 2*aStep, b += 2*bStep)
 	{
-		flip=!flip;
-		As[flip][ty][tx] = A[a + width * ty + tx];
-		Bs[flip][ty][tx] = B[b + width * ty + tx];
-		Bs[flip][ty][tx+1] = B[b+bStep + width *ty  + tx];
+
+		// Declaration of the shared memory array As used to
+		// store the sub-matrix of A
+		__shared__ float As1[BLOCK_SIZE][BLOCK_SIZE];
+		__shared__ float As2[BLOCK_SIZE][BLOCK_SIZE];
+		// Declaration of the shared memory array Bs used to
+		// store the sub-matrix of B
+		__shared__ float Bs1[BLOCK_SIZE][BLOCK_SIZE];
+		__shared__ float Bs2[BLOCK_SIZE][BLOCK_SIZE];
+		// Load the matrices from device memory
+		// to shared memory; each thread loads
+		// one element of each matrix
+		As1[ty][tx] = A[a + width * ty + tx];
+		Bs1[ty][tx] = B[b + width * ty + tx];
+
+		As2[ty][tx] = A[a+aStep + width * ty + tx];
+		Bs2[ty][tx] = B[b+bStep + width * ty + tx];
 
 		// Synchronize to make sure the matrices are loaded
 		__syncthreads();
@@ -277,8 +280,8 @@ matrixMulv5(float *C, float *A, float *B, int width)
 
 		for (int k = 0; k < BLOCK_SIZE; ++k)
 		{
-			Csub1 += As[!flip][ty][k] * Bs[!flip][k][tx];
-			Csub2 += As[!flip][ty][k] * Bs[!flip][k][tx+1];
+			Csub1 += As1[ty][k] * Bs1[k][tx];
+			Csub1 += As2[ty][k] * Bs2[k][tx];
 		}
 
 		// Synchronize to make sure that the preceding
@@ -289,9 +292,8 @@ matrixMulv5(float *C, float *A, float *B, int width)
 
 	// Write the block sub-matrix to device memory;
 	// each thread writes one element
-	int c1 = width * BLOCK_SIZE * by + BLOCK_SIZE * bx;
-	C[c1 + width * ty + tx] = Csub1;
-	C[c1 + width * ty + tx+1] = Csub2;
+	int c = width * BLOCK_SIZE * by + BLOCK_SIZE * bx;
+	C[c + width * ty + tx] = Csub1;
 }
 
 
@@ -435,7 +437,7 @@ int matrixMultiply(int argc, char **argv, int block_size, int width, int v)
 				matrixMulv4<16> <<< grid, threads >>>(d_C, d_A, d_B, width);
 				break;
 			case 5: 
-				//matrixMulv5<16> <<< grid, threads >>>(d_C, d_A, d_B, width);
+				matrixMulv5<16> <<< grid, threads >>>(d_C, d_A, d_B, width);
 				break;
 		}
 	}
@@ -580,7 +582,7 @@ int main(int argc, char **argv)
 	// Use a larger block size for Fermi and above
 	int block_size = 16;
 	int size=160;
-	int V;
+	int V=3;
 	// width of Matrix A
 	if (checkCmdLineFlag(argc, (const char **)argv, "size"))
 	{
@@ -590,7 +592,11 @@ int main(int argc, char **argv)
 	{
 		V = getCmdLineArgumentInt(argc, (const char **)argv, "V");
 	}
-
+	
+	if (checkCmdLineFlag(argc, (const char **)argv, "block"))
+	{
+		block_size = getCmdLineArgumentInt(argc, (const char **)argv, "block");
+	}
 
 
 	int matrix_result = matrixMultiply(argc, argv, block_size, size, V);
