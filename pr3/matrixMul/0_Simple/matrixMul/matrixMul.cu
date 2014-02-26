@@ -189,8 +189,9 @@ matrixMulv4(float *C, float *A, float *B, int width)
 			a += aStep, b += bStep)
 	{
 		flip=!flip;
-		As[flip][ty][tx] = A[a + width * ty + tx];
-		Bs[flip][ty][tx] = B[b + width * ty + tx];
+		
+		As[flip][ty][tx] = A[a+ width * ty + tx];
+		Bs[flip][ty][tx] = B[b+ width * ty + tx];
 
 		// Synchronize to make sure the matrices are loaded
 		__syncthreads();
@@ -244,7 +245,14 @@ matrixMulv5(float *C, float *A, float *B, int width)
 
 	// Csub is used to store the element of the block sub-matrix
 	// that is computed by the thread
-	float Csub1 = 0, Csub2=0;
+	float Csub1 = 0;
+
+	//int flip=0;
+
+	__shared__ float As1[BLOCK_SIZE][BLOCK_SIZE];
+	__shared__ float As2[BLOCK_SIZE][BLOCK_SIZE];
+	__shared__ float Bs1[BLOCK_SIZE][BLOCK_SIZE];
+	__shared__ float Bs2[BLOCK_SIZE][BLOCK_SIZE];
 
 	// Loop over all the sub-matrices of A and B
 	// required to compute the block sub-matrix
@@ -252,18 +260,8 @@ matrixMulv5(float *C, float *A, float *B, int width)
 			a <= aEnd;
 			a += 2*aStep, b += 2*bStep)
 	{
-
-		// Declaration of the shared memory array As used to
-		// store the sub-matrix of A
-		__shared__ float As1[BLOCK_SIZE][BLOCK_SIZE];
-		__shared__ float As2[BLOCK_SIZE][BLOCK_SIZE];
-		// Declaration of the shared memory array Bs used to
-		// store the sub-matrix of B
-		__shared__ float Bs1[BLOCK_SIZE][BLOCK_SIZE];
-		__shared__ float Bs2[BLOCK_SIZE][BLOCK_SIZE];
-		// Load the matrices from device memory
-		// to shared memory; each thread loads
-		// one element of each matrix
+		//flip=!flip
+		
 		As1[ty][tx] = A[a + width * ty + tx];
 		Bs1[ty][tx] = B[b + width * ty + tx];
 
@@ -425,19 +423,102 @@ int matrixMultiply(int argc, char **argv, int block_size, int width, int v)
 		switch(v) {
 			case 1:
 				grid.x = 1; grid.y = 1; grid.z = 1;
-				matrixMulv1<16> <<< grid, threads >>>(d_C, d_A, d_B, width);
+				switch(block_size) {
+					case 8:
+						matrixMulv1<8> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					case 16:
+						matrixMulv1<16> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					case 22:
+						matrixMulv1<22> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					case 32:
+						matrixMulv1<32> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					default:
+						printf("Incorrect block size\n");
+						break;
+				}
 				break;
-			case 2: 
-				matrixMulv2<16> <<< grid, threads >>>(d_C, d_A, d_B, width);
+			case 2:
+				switch(block_size) {
+					case 8:
+						matrixMulv2<8> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					case 16:
+						matrixMulv2<16> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					case 22:
+						matrixMulv2<22> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					case 32:
+						matrixMulv2<32> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					default:
+						printf("Incorrect block size\n");
+						break;
+				}
 				break;
-			case 3: 
-				matrixMulv3<16> <<< grid, threads >>>(d_C, d_A, d_B, width);
+			case 3:
+				switch(block_size) {
+					case 8:
+						matrixMulv3<8> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					case 16:
+						matrixMulv3<16> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					case 22:
+						matrixMulv3<22> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					case 32:
+						matrixMulv3<32> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					default:
+						printf("Incorrect block size\n");
+						break;
+				}
 				break;
 			case 4: 
-				matrixMulv4<16> <<< grid, threads >>>(d_C, d_A, d_B, width);
+				switch(block_size) {
+					case 8:
+						matrixMulv4<8> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					case 16:
+						matrixMulv4<16> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					case 22:
+						matrixMulv4<22> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					case 32:
+						//matrixMulv4<32> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					default:
+						printf("Incorrect block size\n");
+						break;
+				}
 				break;
 			case 5: 
-				matrixMulv5<16> <<< grid, threads >>>(d_C, d_A, d_B, width);
+				switch(block_size) {
+					case 8:
+						matrixMulv5<8> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					case 16:
+						matrixMulv5<16> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					case 22:
+						matrixMulv5<22> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					case 32:
+						//matrixMulv5<32> <<< grid, threads >>>(d_C, d_A, d_B, width);
+						break;
+					default:
+						printf("Incorrect block size\n");
+						break;
+				}
+				break;
+			default:
+				printf("No version found\n");
 				break;
 		}
 	}
