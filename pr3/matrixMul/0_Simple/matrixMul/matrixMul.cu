@@ -247,12 +247,20 @@ matrixMulv5(float *C, float *A, float *B, int width)
 	// that is computed by the thread
 	float Csub1 = 0;
 
-	//int flip=0;
+	int flip=0;
 
-	__shared__ float As1[BLOCK_SIZE][BLOCK_SIZE];
-	__shared__ float As2[BLOCK_SIZE][BLOCK_SIZE];
-	__shared__ float Bs1[BLOCK_SIZE][BLOCK_SIZE];
-	__shared__ float Bs2[BLOCK_SIZE][BLOCK_SIZE];
+	__shared__ float As1[2][BLOCK_SIZE][BLOCK_SIZE];
+	__shared__ float As2[2][BLOCK_SIZE][BLOCK_SIZE];
+	__shared__ float Bs1[2][BLOCK_SIZE][BLOCK_SIZE];
+	__shared__ float Bs2[2][BLOCK_SIZE][BLOCK_SIZE];
+
+
+	As1[flip][ty][tx] = A[aBegin + width * ty + tx];
+	Bs1[flip][ty][tx] = B[bBegin + width * ty + tx];
+
+	As2[flip][ty][tx] = A[aBegin + aStep + width * ty + tx];
+	Bs2[flip][ty][tx] = B[bBegin + bStep + width * ty + tx];
+
 
 	// Loop over all the sub-matrices of A and B
 	// required to compute the block sub-matrix
@@ -260,13 +268,14 @@ matrixMulv5(float *C, float *A, float *B, int width)
 			a <= aEnd;
 			a += 2*aStep, b += 2*bStep)
 	{
-		//flip=!flip
+		flip=!flip;
 		
-		As1[ty][tx] = A[a + width * ty + tx];
-		Bs1[ty][tx] = B[b + width * ty + tx];
-
-		As2[ty][tx] = A[a+aStep + width * ty + tx];
-		Bs2[ty][tx] = B[b+bStep + width * ty + tx];
+		As1[flip][ty][tx] = A[a + width * ty + tx];
+		Bs1[flip][ty][tx] = B[b + width * ty + tx];
+		if(a+aStep<=aEnd) {
+			As2[flip][ty][tx] = A[a+aStep + width * ty + tx];
+			Bs2[flip][ty][tx] = B[b+bStep + width * ty + tx];
+		}
 
 		// Synchronize to make sure the matrices are loaded
 		__syncthreads();
@@ -278,8 +287,9 @@ matrixMulv5(float *C, float *A, float *B, int width)
 
 		for (int k = 0; k < BLOCK_SIZE; ++k)
 		{
-			Csub1 += As1[ty][k] * Bs1[k][tx];
-			Csub1 += As2[ty][k] * Bs2[k][tx];
+			Csub1 += As1[!flip][ty][k] * Bs1[!flip][k][tx];
+			if(a+aStep<=aEnd)
+				Csub1 += As2[!flip][ty][k] * Bs2[!flip][k][tx];
 		}
 
 		// Synchronize to make sure that the preceding
@@ -416,7 +426,7 @@ int matrixMultiply(int argc, char **argv, int block_size, int width, int v)
 	}
 
 	// Execute the kernel
-	int nIter = 300;
+	int nIter = 1;
 
 	for (int j = 0; j < nIter; j++)
 	{
