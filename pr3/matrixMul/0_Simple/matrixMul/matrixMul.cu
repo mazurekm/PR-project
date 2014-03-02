@@ -174,13 +174,12 @@ matrixMulv4(float *C, float *A, float *B, int width)
 	// Csub is used to store the element of the block sub-matrix
 	// that is computed by the thread
 	float Csub = 0;
-	int flip=0;
-	__shared__ float As[2][BLOCK_SIZE][BLOCK_SIZE];
-	__shared__ float Bs[2][BLOCK_SIZE][BLOCK_SIZE];
+	__shared__ float As[BLOCK_SIZE][BLOCK_SIZE];
+	__shared__ float Bs[BLOCK_SIZE][BLOCK_SIZE];
 
-	As[flip][ty][tx] = A[aBegin + width * ty + tx];
-	Bs[flip][ty][tx] = B[bBegin + width * ty + tx];
-	__syncthreads();
+	float tmpA = A[aBegin + width * ty + tx];
+	
+	float tmpB = B[bBegin + width * ty + tx];
 
 	// Loop over all the sub-matrices of A and B
 	// required to compute the block sub-matrix
@@ -188,14 +187,15 @@ matrixMulv4(float *C, float *A, float *B, int width)
 			a <= aEnd;
 			a += aStep, b += bStep)
 	{
-		flip=!flip;
 		
-		As[flip][ty][tx] = A[a+ width * ty + tx];
-		Bs[flip][ty][tx] = B[b+ width * ty + tx];
+		As[ty][tx] = tmpA; //A[a+aStep+ width * ty + tx];
+		Bs[ty][tx] = tmpB; //B[b+bStep+ width * ty + tx];
 
 		// Synchronize to make sure the matrices are loaded
 		__syncthreads();
 
+		tmpA = A[a+aStep + width * ty + tx];
+		tmpB = B[b+bStep + width * ty + tx];
 		// Multiply the two matrices together;
 		// each thread computes one element
 		// of the block sub-matrix
@@ -203,7 +203,7 @@ matrixMulv4(float *C, float *A, float *B, int width)
 
 		for (int k = 0; k < BLOCK_SIZE; ++k)
 		{
-			Csub += As[!flip][ty][k] * Bs[!flip][k][tx];
+			Csub += As[ty][k] * Bs[k][tx];
 		}
 
 		// Synchronize to make sure that the preceding
@@ -221,7 +221,8 @@ matrixMulv4(float *C, float *A, float *B, int width)
 	template <int BLOCK_SIZE> __global__ void
 matrixMulv5(float *C, float *A, float *B, int width)
 {
-	int hop=width/BLOCK_SIZE/2;//((width/BLOCK_SIZE)%2)? (width/BLOCK_SIZE/2)+1:(width/BLOCK_SIZE/2);
+	int hop=width/BLOCK_SIZE/2;
+	
 	int bx = blockIdx.x;
 	int by = blockIdx.y;
 
@@ -249,18 +250,15 @@ matrixMulv5(float *C, float *A, float *B, int width)
 	// that is computed by the thread
 	float Csub1 = 0, Csub2=0;
 		
-	int flip=0;
 
-	__shared__ float As1[2][BLOCK_SIZE][BLOCK_SIZE];
-	__shared__ float Bs1[2][BLOCK_SIZE][BLOCK_SIZE];
-	__shared__ float Bs2[2][BLOCK_SIZE][BLOCK_SIZE];
+	__shared__ float As1[BLOCK_SIZE][BLOCK_SIZE];
+	__shared__ float Bs1[BLOCK_SIZE][BLOCK_SIZE];
+	__shared__ float Bs2[BLOCK_SIZE][BLOCK_SIZE];
 
 
-	As1[flip][ty][tx] = A[aBegin + width * ty + tx];
-	Bs1[flip][ty][tx] = B[bBegin + width * ty + tx];
-	
-	Bs2[flip][ty][tx] = B[bBegin1 + width * ty + tx];
-
+	float tmpA = A[aBegin + width * ty + tx];
+	float tmpB = B[bBegin + width * ty + tx];
+	float tmpB1= B[bBegin1 + width * ty + tx];
 
 	// Loop over all the sub-matrices of A and B
 	// required to compute the block sub-matrix
@@ -268,11 +266,9 @@ matrixMulv5(float *C, float *A, float *B, int width)
 			a <= aEnd;
 			a += aStep, b += bStep,b1+=bStep)
 	{
-		flip=!flip;
-		
-		As1[flip][ty][tx] = A[a + width * ty + tx];
-		Bs1[flip][ty][tx] = B[b + width * ty + tx];
-		Bs2[flip][ty][tx] = B[b1 + width * ty + tx];
+		As1[ty][tx] = tmpA;//A[a + width * ty + tx];
+		Bs1[ty][tx] = tmpB;//B[b + width * ty + tx];
+		Bs2[ty][tx] = tmpB1;//B[b1 + width * ty + tx];
 
 		// Synchronize to make sure the matrices are loaded
 		__syncthreads();
@@ -280,12 +276,17 @@ matrixMulv5(float *C, float *A, float *B, int width)
 		// Multiply the two matrices together;
 		// each thread computes one element
 		// of the block sub-matrix
+
+		tmpA=A[a+aStep + width * ty + tx];
+		tmpB=B[b+bStep + width * ty + tx];
+		tmpB1=B[b1+bStep + width * ty + tx];
+
 #pragma unroll
 
 		for (int k = 0; k < BLOCK_SIZE; ++k)
 		{
-			Csub1 += As1[!flip][ty][k] * Bs1[!flip][k][tx];
-			Csub2 += As1[!flip][ty][k] * Bs2[!flip][k][tx];
+			Csub1 += As1[ty][k] * Bs1[k][tx];
+			Csub2 += As1[ty][k] * Bs2[k][tx];
 		}
 
 		// Synchronize to make sure that the preceding
@@ -298,8 +299,10 @@ matrixMulv5(float *C, float *A, float *B, int width)
 	// each thread writes one element
 	int c1 = width * BLOCK_SIZE * by + BLOCK_SIZE * bx;
 	C[c1 + width * ty + tx] = Csub1;
+	//if(is_odd||bx<hop-1) {
 	int c2 = width * BLOCK_SIZE * by + BLOCK_SIZE * (bx+hop);
 	C[c2 + width * ty + tx] = Csub2;
+	//}
 	
 }
 
@@ -508,7 +511,7 @@ int matrixMultiply(int argc, char **argv, int block_size, int width, int v)
 				}
 				break;
 			case 5:
-				grid.x/=2;
+				grid.x=(grid.x%2)? grid.x/2+1:grid.x/2;
 				switch(block_size) {
 					case 8:
 						matrixMulv5<8> <<< grid, threads >>>(d_C, d_A, d_B, width);
